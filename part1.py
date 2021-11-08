@@ -1,7 +1,7 @@
 '''
 DKM / direct kinematic model
-DDM / direct diff model
-IDM / inverse diff model
+DDKM / direct diff model
+IDKM / inverse diff model
 '''
 import math as m
 import numpy as np
@@ -48,7 +48,7 @@ def DKM(theta1,theta2,theta3,theta4,theta5,theta6,xo,yo,zo):
 	return T01,T02,T03,T04,T05,T06,position,R06
 
 ###############################DDM#####################################
-def DDM(T01,T02,T03,T04,T05,T06):
+def DDKM(T01,T02,T03,T04,T05,T06):
 	"""
 	this function calculate the geometric J
 	"""
@@ -114,7 +114,7 @@ def DDM(T01,T02,T03,T04,T05,T06):
 	return J01,J02,J03,J04,J05,J06
 
 ###############################IDM#####################################
-def IDM(J):
+def IDKM(J):
 	return np.linalg.inv(J) 
 
 ###############################test#####################################
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 	theta = 0
 	T01,T02,T03,T04,T05,T06,position,R06 = DKM(0,0,0,0,0,0,  0,0,d6)
 
-	J01,J02,J03,J04,J05,J06 = DDM(T01,T02,T03,T04,T05,T06)
+	J01,J02,J03,J04,J05,J06 = DDKM(T01,T02,T03,T04,T05,T06)
 
 	np.set_printoptions(precision=4)
 	print(J01)
