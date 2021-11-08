@@ -6,6 +6,7 @@ IDKM / inverse diff model
 import math as m
 import numpy as np
 from icecream import ic
+
 ###############################parameters#####################################
 a2 = 0.612
 a3 = 0.5723
@@ -16,10 +17,10 @@ d6 = 0.0922
 
 def T(alpha, a, theta, r):
 	T = np.matrix([
-		[m.cos(theta), -m.sin(theta), 0, a],
+		[m.cos(theta),             -m.sin(theta),               0,             a],
 		[m.cos(alpha)*m.sin(theta), m.cos(alpha)*m.cos(theta), -m.sin(alpha), -r*m.sin(alpha)],
-		[m.sin(alpha)*m.sin(theta), m.sin(alpha)*m.cos(theta), m.cos(alpha), r*m.cos(alpha)],
-		[0, 0, 0, 1]
+		[m.sin(alpha)*m.sin(theta), m.sin(alpha)*m.cos(theta),  m.cos(alpha),  r*m.cos(alpha)],
+		[0,                         0,                          0,             1]
 	])
 	return T
 
@@ -87,7 +88,7 @@ def DDKM(T01,T02,T03,T04,T05,T06):
 	J04 = np.array([])
 	J05 = np.array([])
 	J06 = np.array([])
-
+    
 	for i in range(6): #why having each Jij of 6 columns ?
 		J01 = np.append(J01,Ji(sigma,z[:,i],p01[:,i]))
 		J02 = np.append(J02,Ji(sigma,z[:,i],p02[:,i]))
@@ -111,7 +112,25 @@ def DDKM(T01,T02,T03,T04,T05,T06):
 	J05 = np.transpose(J05)
 	J06 = np.transpose(J06)
 
-	return J01,J02,J03,J04,J05,J06
+	#D calculation
+	R06 = T06[0:3,0:3]
+	
+	L = R06.dot(T06[0:3,3])
+	L = np.asarray(L)
+
+	D = np.array([
+	[ 0   , float(L[2]), -float(L[1])] ,
+	[-float(L[2]), 0,     float(L[0])],
+	[ float(L[1]),-float(L[0]),  0 ]
+	])
+
+	JJ1 = np.concatenate((np.eye(3),D), axis=1)
+	JJ2 = np.concatenate((np.zeros((3,3)),np.eye(3)), axis=1)
+	JJn = np.concatenate((JJ1,JJ2), axis=0)
+	
+	J = JJn.dot(J06)
+    
+	return J01,J02,J03,J04,J05,J06,J,D
 
 ###############################IDM#####################################
 def IDKM(J):
@@ -123,7 +142,7 @@ if __name__ == "__main__":
 	theta = 0
 	T01,T02,T03,T04,T05,T06,position,R06 = DKM(0,0,0,0,0,0,  0,0,d6)
 
-	J01,J02,J03,J04,J05,J06 = DDKM(T01,T02,T03,T04,T05,T06)
+	J01,J02,J03,J04,J05,J06,J,D = DDKM(T01,T02,T03,T04,T05,T06)
 
 	np.set_printoptions(precision=4)
 	print(J01)
