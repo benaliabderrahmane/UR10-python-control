@@ -65,6 +65,7 @@ def DDKM(T01,T02,T03,T04,T05,T06):
 	p06 =  np.array([T06[0:3,3]-T01[0:3,3],T06[0:3,3]-T02[0:3,3],T06[0:3,3]-T03[0:3,3],T06[0:3,3]-T04[0:3,3],T06[0:3,3]-T05[0:3,3],T06[0:3,3]-T06[0:3,3]])
 	
 	z = z.reshape([6,3])
+    
 	#p0n = p0n.reshape([6,3])
 	p01 = p01.reshape([6,3])
 	p02 = p02.reshape([6,3])
@@ -119,9 +120,9 @@ def DDKM(T01,T02,T03,T04,T05,T06):
 	L = np.asarray(L)
 
 	D = np.array([
-	[ 0   , float(L[2]), -float(L[1])] ,
-	[-float(L[2]), 0,     float(L[0])],
-	[ float(L[1]),-float(L[0]),  0 ]
+	[0,		     d6*T06[2,2], -d6*T06[1,2]],
+	[-d6*T06[2,2], 0,          d6*T06[0,2]],
+	[ d6*T06[1,2],-d6*T06[0,2],  0        ]
 	])
 
 	JJ1 = np.concatenate((np.eye(3),D), axis=1)
@@ -134,8 +135,13 @@ def DDKM(T01,T02,T03,T04,T05,T06):
 
 ###############################IDM#####################################
 def IDKM(J):
-	return np.linalg.inv(J) 
-
+    if np.linalg.det(J) != 0:
+        return np.linalg.inv(J)
+    else:
+        k = 1
+        return J.transpose()*np.linalg.inv(J*J.transpose()+k**2*np.eye(6))
+        
+            
 ###############################test#####################################
 if __name__ == "__main__":
 	
@@ -145,4 +151,4 @@ if __name__ == "__main__":
 	J01,J02,J03,J04,J05,J06,J,D = DDKM(T01,T02,T03,T04,T05,T06)
 
 	np.set_printoptions(precision=4)
-	print(J01)
+	
