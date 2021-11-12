@@ -19,7 +19,7 @@ def S(n):
 def control_orientation(Rd,Re,wd):
 
     Ko = 1
-    
+
     nd = Rd[0:3,1]
     sd = Rd[0:3,2]
     ad = Rd[0:3,3]
@@ -28,7 +28,7 @@ def control_orientation(Rd,Re,wd):
     se = Re[0:3,2]
     ae = Re[0:3,3]
 
-    e0 = 1/2*(np.cross(ne,nd)+np.cross(se,sd)+np.cross(ae,ad))
+    eo = 1/2*(np.cross(ne,nd)+np.cross(se,sd)+np.cross(ae,ad))
 
     L = -1/2*(S(nd)*S(ne)+S(sd)*S(se)+S(sd)*S(se))
 
@@ -39,3 +39,11 @@ def control_orientation(Rd,Re,wd):
     uo = Linv*(Lt*wd+Ko*eo)
 
     return uo
+
+def control_position(Xd, Xi, X,r_dot):
+    kp = 1
+    D = Xd - Xi
+    ep = Xd - X
+    Xd_dot = r_dot * D
+    up = Xd_dot + kp*ep
+    return up

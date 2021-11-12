@@ -135,7 +135,7 @@ def DDKM(T01,T02,T03,T04,T05,T06):
 
 ###############################IDM#####################################
 def IDKM(J):
-    if np.linalg.det(J) != 0:
+    if np.linalg.det(J) != 0:  
         return np.linalg.inv(J)
     else:
         k = 1
