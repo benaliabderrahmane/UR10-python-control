@@ -22,6 +22,7 @@ except:
 '''
 ################################################################################################################################
 from posixpath import join
+from re import A
 from part1 import *
 from part2 import *
 from part3 import *
@@ -41,12 +42,12 @@ if clientID!= -1:
 
 ##########################################################  CODE   ######################################################################
 
-    opmode = sim.simx_opmode_oneshot_wait
+    opmode = sim.simx_opmode_blocking
     
     def joints_handle(ClientID = clientID, mode = opmode):
-        joints_id = [0,0,0,0,0,0,0] 
-        joints_names = ['UR10_joint1#','UR10_joint2#','UR10_joint3#','UR10_joint4#','UR10_joint5#','UR10_joint6#','UR10_connection']
-        for i in range(7):
+        joints_id = [0,0,0,0,0,0] 
+        joints_names = ['UR10_joint1#','UR10_joint2#','UR10_joint3#','UR10_joint4#','UR10_joint5#','UR10_joint6#']
+        for i in range(6):
             _,joints_id[i] = sim.simxGetObjectHandle(ClientID, joints_names[i],mode)
         return joints_id
 
@@ -68,13 +69,13 @@ if clientID!= -1:
     ##go to configuration 0
     for i in range(6):   
         #print('-------------------------------------------------------------')
-        set_joint_orientation(joints_id[i], 0, mode=sim.simx_opmode_blocking) 
+        set_joint_orientation(joints_id[i], 0, mode=opmode) 
         
     
     
     sim.simxSynchronous(clientID,True)
     sim.simxSynchronousTrigger(clientID) 
-    sim.simxStartSimulation(clientID, sim.simx_opmode_blocking)
+    sim.simxStartSimulation(clientID, opmode)
 
 
 
@@ -84,52 +85,67 @@ if clientID!= -1:
     #initialization
 
 
-    t  = np.linspace(0,5,100)
+    t  = np.linspace(0,20,100)
     tf = t[-1]
     qpast = [0,0,0,0,0,0]
-    deltaT = 20/100
-    Xi, _ = get_joint_orientation(joints_id[6]) #to check
-    ic(Xi)
+    deltaT = t[1]-t[0]
+    Xi, Ri = get_joint_orientation(joints_id[5]) #to check
+    
     
     
     q=[]
     for i in range(6):
-        _,temp = sim.simxGetJointPosition(clientID,joints_id[i] , sim.simx_opmode_blocking)
+        _,temp = sim.simxGetJointPosition(clientID,joints_id[i] , opmode)
         q.append(temp)
   
     
  
 
     
-    _ , T = sim.simxGetJointMatrix(clientID, joints_id[0], opmode) #to check
+    _ , T = sim.simxGetJointMatrix(clientID, joints_id[5], opmode) #to check
 
 
     Ri = [[T[0],T[1],T[2]],[T[3],T[4],T[5]],[T[6],T[7],T[8]]]
     Ri = np.array(Ri)
     
-    _,_,_,_,_,_,Xf,_ = DKM(np.pi/2, 0, np.pi/2, 0, np.pi/2, 0,  0,0,d6)
+    ic(Ri)
+
+    _,_,_,_,_,_,Xf,Rf = DKM(0,0,np.pi/2,0,0,0,  0,0,d6)
     Xf = np.array(Xf[0,0:3])
     Xf = np.concatenate(Xf)
 
-    Rf = Ri
-    
+    for i in range(6):
+        set_joint_orientation(joints_id[i],0, mode=opmode)
+
+    time.sleep(3)
     X = Xi
+    temp = [0,0,np.pi/2,0,0,0]
+    for i in range(6):
+        set_joint_orientation(joints_id[i],temp[i], mode=opmode)
+    q=[]
 
 
 
+    time.sleep(3)
 
-    
-
-    for ti in t[0:-1]:
+    for ti in t[:-1]:
+        time.sleep(deltaT*10)
         #get Xi from coppelia
         X, _ = get_joint_orientation(joints_id[-1]) #to check
-        ic(X)
-        Xd, Rd, r, r_dot, wd, D = generate_trajectory(Xi, Xf, Ri, Rf, ti, tf) 
         
+        Xd, Rd, r, r_dot, wd, D = generate_trajectory(Xi, Xf, Ri, Rf, tf, tf) 
         
+        ic(Rd)
+
         T01,T02,T03,T04,T05,T06,Xr,R06 = DKM(qpast[0], qpast[1], qpast[2], qpast[3], qpast[4], qpast[5],  0,0,d6)
 
-        Re = R06
+        _ , T = sim.simxGetJointMatrix(clientID, joints_id[5], opmode) #to check
+
+
+        Re = [[T[0],T[1],T[2]],[T[3],T[4],T[5]],[T[6],T[7],T[8]]]
+        Re = np.array(Re)
+
+
         #try to get Ti from copp
         J01,J02,J03,J04,J05,J06,J = DDKM(T01,T02,T03,T04,T05,T06)
         
@@ -137,12 +153,13 @@ if clientID!= -1:
         #X = np.array(Xr[0,0:3])
         #X = np.concatenate(X)
         
-        #ic(X)
+
+
         up = control_position(Xd, X, D,r_dot)
 
         #uo = control_orientation(Re,Re,wd)
         
-        uo = [1,1,1]
+        uo = [0,0,0]
 
 
 
@@ -155,15 +172,15 @@ if clientID!= -1:
 
         #integrate qdot 
         for i in range(6):
-            q.append(qpast[i]+deltaT*qdot[i])
+            q.append(((qpast[i]+deltaT*qdot[i]) + np.pi) % (2 * np.pi) - np.pi)
+
         qpast = q
-        
         #send control
         for i in range(6):
-            set_joint_orientation(joints_id[i], q[i], mode=sim.simx_opmode_blocking)
+            set_joint_orientation(joints_id[i], q[i], mode=opmode)
         
         
-    #ic(Xf)
+    ic(Rf)
     #close.
     sim.simxGetPingTime(clientID)
     sim.simxFinish(clientID)
@@ -172,3 +189,4 @@ if clientID!= -1:
 else:
     print ('Failed connecting to remote API server')
 print ('Program ended')
+

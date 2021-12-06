@@ -16,18 +16,18 @@ def generate_r(t, tf):
 
 def generate_trajectory(Xi, Xf, Ri, Rf, t, tf):  
     # compute rot (u,theta)
-    rot_u_theta = np.array([])
+
     rot_u_theta = (np.transpose(Ri)).dot(Rf)
     c_theta = 0.5*(rot_u_theta[0, 0] + rot_u_theta[1, 1] + rot_u_theta[2, 2] - 1)
-    s_theta = 0.5*m.sqrt(pow(rot_u_theta[1, 2]-rot_u_theta[2, 1], 2) + pow(rot_u_theta[2, 0]-rot_u_theta[0, 2], 2) + pow(rot_u_theta[0, 1]-rot_u_theta[1, 0], 2))
+    s_theta = 0.5*m.sqrt(pow(rot_u_theta[2, 1]-rot_u_theta[1, 2], 2) + pow(rot_u_theta[0, 2]-rot_u_theta[2, 0], 2) + pow(rot_u_theta[1, 0]-rot_u_theta[0, 1], 2))
     #s_theta += 0.00000001  # not divide by 0
     # compute theta , u
     theta = np.arctan2(s_theta, c_theta)
     if s_theta != 0:
         u = (1/(2*s_theta)) * np.array([
-            [rot_u_theta[1, 2]-rot_u_theta[2, 1]],
-            [rot_u_theta[2, 0]-rot_u_theta[0, 2]],
-            [rot_u_theta[0, 1]-rot_u_theta[1, 0]]
+            [rot_u_theta[2, 1]-rot_u_theta[1, 2]],
+            [rot_u_theta[0, 2]-rot_u_theta[2, 0]],
+            [rot_u_theta[1, 0]-rot_u_theta[0, 1]]
         ])
     else:
         u = np.array([
@@ -35,18 +35,25 @@ def generate_trajectory(Xi, Xf, Ri, Rf, t, tf):
            0.0,
            0.0
         ])
+        
     # compute rot(u,r(t)theta)
     r, r_dot = generate_r(t, tf)
     
-    a = [u[0]*u[0]*(1-m.cos(r*theta))+m.cos(r*theta),    u[0]*u[1]*(1-m.cos(r*theta)) -
-         u[2]*m.sin(r*theta), u[0]*u[2]*(1-m.cos(r*theta))+u[1]*m.sin(r*theta)]
-    b = [u[0]*u[1]*(1-m.cos(r*theta))+u[2]*m.sin(r*theta), u[1]*u[1]*(1-m.cos(r*theta)) +
-         m.cos(r*theta),      u[1]*u[2]*(1-m.cos(r*theta))-u[0]*m.sin(r*theta)]
-    c = [u[0]*u[2]*(1-m.cos(r*theta))-u[1]*m.sin(r*theta), u[1]*u[2]*(1-m.cos(r*theta)
-                                                                      )+u[0]*m.sin(r*theta), u[2]*u[2]*(1-m.cos(r*theta))+m.cos(r*theta)]
-    rot_u_r_theta = [a, b, c]
+    temp = np.array([[u[0]*u[0]*(1-m.cos(r*theta))+m.cos(r*theta),    u[0]*u[1]*(1-m.cos(r*theta)) -
+         u[2]*m.sin(r*theta), u[0]*u[2]*(1-m.cos(r*theta))+u[1]*m.sin(r*theta)],
+     [u[0]*u[1]*(1-m.cos(r*theta))+u[2]*m.sin(r*theta), u[1]*u[1]*(1-m.cos(r*theta)) +
+         m.cos(r*theta),      u[1]*u[2]*(1-m.cos(r*theta))-u[0]*m.sin(r*theta)],
+     [u[0]*u[2]*(1-m.cos(r*theta))-u[1]*m.sin(r*theta), u[1]*u[2]*(1-m.cos(r*theta)
+                                                                      )+u[0]*m.sin(r*theta), u[2]*u[2]*(1-m.cos(r*theta))+m.cos(r*theta)]])
+    
+    rot_u_r_theta = temp[:,:,0]
+
+    
     # compute Rd(t)
-    Rd = Ri.dot(rot_u_r_theta)
+    if s_theta != 0:
+        Rd = Ri.dot(rot_u_r_theta)
+    else:
+        Rd = Ri
     # compute Xd
     Xd = np.array([0.0, 0.0, 0.0])
     

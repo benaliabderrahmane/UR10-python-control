@@ -138,7 +138,7 @@ def IDKM(J):
     if np.linalg.det(J) != 0:  
         return np.linalg.inv(J)
     else:
-        k = 2
+        k = 100
         return J.transpose()*np.linalg.inv(J*J.transpose()+k**2*np.eye(6))
         
             

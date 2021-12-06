@@ -18,7 +18,7 @@ def S(n):
 
 def control_orientation(Rd,Re,wd):
 
-    Ko = 0.01
+    Ko = 1
 
     nd = Rd[0:3,0]
     sd = Rd[0:3,1]
@@ -41,7 +41,7 @@ def control_orientation(Rd,Re,wd):
     return uo
 
 def control_position(Xd,X,D,r_dot):
-    kp = 0.5
+    kp = 2
     ep = Xd - X
     Xd_dot = np.dot(r_dot,D)
     up = Xd_dot + kp*ep
