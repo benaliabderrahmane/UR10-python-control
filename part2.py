@@ -1,13 +1,6 @@
-'''
-Trajectory generation
-verify relations
-'''
 import numpy as np
 import math as m
 from icecream import ic
-
-
-
 
 def generate_r(t, tf):
     r = 10*(t/tf)**3 - 15*(t/tf)**4 + 6*(t/tf)**5
@@ -16,7 +9,6 @@ def generate_r(t, tf):
 
 def generate_trajectory(Xi, Xf, Ri, Rf, t, tf):  
     # compute rot (u,theta)
-
     rot_u_theta = (np.transpose(Ri)).dot(Rf)
     c_theta = 0.5*(rot_u_theta[0, 0] + rot_u_theta[1, 1] + rot_u_theta[2, 2] - 1)
     s_theta = 0.5*m.sqrt(pow(rot_u_theta[2, 1]-rot_u_theta[1, 2], 2) + pow(rot_u_theta[0, 2]-rot_u_theta[2, 0], 2) + pow(rot_u_theta[1, 0]-rot_u_theta[0, 1], 2))

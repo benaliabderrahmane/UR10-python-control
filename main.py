@@ -5,7 +5,7 @@ except:
     ####doc
 '''
     simxGetObjectHandle(clientID, objectName, operationMode)
-    <
+
     simxGetJointPosition(clientID, jointHandle, operationMode)
     simxSetJointPosition(clientID, jointHandle, position, operationMode)
     simxSetJointTargetPosition(clientID, jointHandle, targetPosition, operationMode)
@@ -63,124 +63,86 @@ if clientID!= -1:
     ## main
     
     joints_id = joints_handle()
-    orientations = [0,0,0,0,0,0]
-    positions = [0,0,0,0,0,0]
 
     ##go to configuration 0
+    print("go to config 0")
+    
     for i in range(6):   
-        #print('-------------------------------------------------------------')
         set_joint_orientation(joints_id[i], 0, mode=opmode) 
+    Xi, _= get_joint_orientation(joints_id[5], ClientID = clientID, relativeTo=-1, mode = opmode)
+    Xi = np.array(Xi).reshape(3, 1)
+    _ , T = sim.simxGetJointMatrix(clientID, joints_id[5], opmode) 
+    Ri = [[T[0],T[1],T[2]],[T[3],T[4],T[5]],[T[6],T[7],T[8]]]
+    Ri = np.array(Ri)
+    time.sleep(3)
+    
+    ##go to configuration 1
+    print("go to config 1")
+    theta = [0, 0, 0.5, 0, 0, 10]
+    for i in range(6):   
+        set_joint_orientation(joints_id[i], theta[i], mode=opmode) 
+    Xf, _= get_joint_orientation(joints_id[5], ClientID = clientID, relativeTo=-1, mode = opmode)
+    Xf = np.array(Xf).reshape(3, 1)
+    _ , T = sim.simxGetJointMatrix(clientID, joints_id[5], opmode) 
+    Rf = [[T[0],T[1],T[2]],[T[3],T[4],T[5]],[T[6],T[7],T[8]]]
+    Rf = np.array(Rf)
+    time.sleep(2)
+
+    ##re go to configuration 0
+    print("re go to config 0")
+    
+    for i in range(6):   
+        set_joint_orientation(joints_id[i], 0, mode=opmode)
         
-    
-    
+        
+
+    #time.sleep(5)
+
     sim.simxSynchronous(clientID,True)
     sim.simxSynchronousTrigger(clientID) 
     sim.simxStartSimulation(clientID, opmode)
-
-
-
     
-
-    #main loop
-    #initialization
-
-
     t  = np.linspace(0,20,100)
     tf = t[-1]
-    qpast = [0,0,0,0,0,0]
     deltaT = t[1]-t[0]
-    Xi, Ri = get_joint_orientation(joints_id[5]) #to check
-    
-    
-    
-    q=[]
-    for i in range(6):
-        _,temp = sim.simxGetJointPosition(clientID,joints_id[i] , opmode)
-        q.append(temp)
-  
-    
- 
 
-    
-    _ , T = sim.simxGetJointMatrix(clientID, joints_id[5], opmode) #to check
-
-
-    Ri = [[T[0],T[1],T[2]],[T[3],T[4],T[5]],[T[6],T[7],T[8]]]
-    Ri = np.array(Ri)
-    
-    ic(Ri)
-
-    _,_,_,_,_,_,Xf,Rf = DKM(0,0,np.pi/2,0,0,0,  0,0,d6)
-    Xf = np.array(Xf[0,0:3])
-    Xf = np.concatenate(Xf)
-
-    for i in range(6):
-        set_joint_orientation(joints_id[i],0, mode=opmode)
-
-    time.sleep(3)
-    X = Xi
-    temp = [0,0,np.pi/2,0,0,0]
-    for i in range(6):
-        set_joint_orientation(joints_id[i],temp[i], mode=opmode)
-    q=[]
-
-
-
-    time.sleep(3)
+    Xd_1 = Xi
+    Rd_1 = Ri
+    qpast = [0,0,0,0,0,0]
+    d6 = 0.0922 
 
     for ti in t[:-1]:
-        time.sleep(deltaT*10)
-        #get Xi from coppelia
-        X, _ = get_joint_orientation(joints_id[-1]) #to check
+        #time.sleep(deltaT*10)
+        Xd, Rd, r, r_dot, wd, D = generate_trajectory(Xi, Xf, Ri, Rf, ti, tf) 
+        ##try control
+        Xd = Xd.reshape(3,1)
+        kp = 1
+        up = control_position(Xd, Xd_1, D,r_dot, kp)
+        ko = 1
+        uo = control_orientation(Rd, Rd_1, wd, ko)
+        #uo = [0,0,0]
         
-        Xd, Rd, r, r_dot, wd, D = generate_trajectory(Xi, Xf, Ri, Rf, tf, tf) 
-        
-        ic(Rd)
-
-        T01,T02,T03,T04,T05,T06,Xr,R06 = DKM(qpast[0], qpast[1], qpast[2], qpast[3], qpast[4], qpast[5],  0,0,d6)
-
-        _ , T = sim.simxGetJointMatrix(clientID, joints_id[5], opmode) #to check
-
-
-        Re = [[T[0],T[1],T[2]],[T[3],T[4],T[5]],[T[6],T[7],T[8]]]
-        Re = np.array(Re)
-
-
-        #try to get Ti from copp
-        J01,J02,J03,J04,J05,J06,J = DDKM(T01,T02,T03,T04,T05,T06)
-        
-        Jinv = IDKM(J)
-        #X = np.array(Xr[0,0:3])
-        #X = np.concatenate(X)
-        
-
-
-        up = control_position(Xd, X, D,r_dot)
-
-        #uo = control_orientation(Re,Re,wd)
-        
-        uo = [0,0,0]
-
-
+        #uo = np.array(uo).reshape(3,1)
 
         u = np.concatenate((up,uo))
-        
-        
+        #Jinv
+        T01,T02,T03,T04,T05,T06,Xr,R06 = DKM(qpast[0], qpast[1], qpast[2], qpast[3], qpast[4], qpast[5],  0,0,d6)
+        J01,J02,J03,J04,J05,J06,J = DDKM(T01,T02,T03,T04,T05,T06)
+        Jinv = IDKM(J)
         qdot = np.dot(Jinv,u)
-        
         q = []
-
         #integrate qdot 
         for i in range(6):
             q.append(((qpast[i]+deltaT*qdot[i]) + np.pi) % (2 * np.pi) - np.pi)
-
-        qpast = q
+        
         #send control
         for i in range(6):
             set_joint_orientation(joints_id[i], q[i], mode=opmode)
         
-        
-    ic(Rf)
+        qpast = q
+        Xd_1 = Xd
+        Rd_1 = Rd
+    
     #close.
     sim.simxGetPingTime(clientID)
     sim.simxFinish(clientID)
